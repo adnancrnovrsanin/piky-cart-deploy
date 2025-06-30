@@ -2,7 +2,7 @@
   # Enable Row Level Security and Add Access Policies
 
   1. Security
-    - Enable RLS on all existing tables
+    - Enable RLS on all tables
     - Add policies for shopping_lists, list_items, and other tables
     - Ensure users can only access their own data
     - Add special policies for shared lists and collaborators
@@ -11,7 +11,7 @@
     - Enable RLS on all tables
     - Add owner access policies
     - Add collaborator access policies
-    - Add shared list access policies
+    - Add shared link access policies
 */
 
 -- Enable RLS on all tables
