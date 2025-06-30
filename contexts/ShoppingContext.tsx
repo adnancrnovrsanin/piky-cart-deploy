@@ -328,28 +328,57 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
     
     try {
       // Load only active lists (not archived) for the main lists view
+      // Remove nested items query to avoid RLS recursion
       const { data: lists, error } = await supabase
         .from('shopping_lists')
-        .select(`
-          *,
-          items:list_items(*)
-        `)
+        .select('*')
         .eq('is_archived', false)
-        .eq('user_id', user!.id) // CRITICAL FIX: Filter by current user ID
+        .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       if (lists) {
-        const formattedLists = lists.map(list => ({
-          ...list,
-          items: list.items || [],
-          item_count: list.item_count || 0,
-          purchased_count: list.purchased_count || 0,
-        }));
+        // Load items separately for each list to avoid RLS issues
+        const listsWithItems = await Promise.all(
+          lists.map(async (list) => {
+            try {
+              const { data: items, error: itemsError } = await supabase
+                .from('list_items')
+                .select('*')
+                .eq('list_id', list.id)
+                .order('created_at', { ascending: false });
+
+              if (itemsError) {
+                console.warn(`Failed to load items for list ${list.id}:`, itemsError);
+                return {
+                  ...list,
+                  items: [],
+                  item_count: list.item_count || 0,
+                  purchased_count: list.purchased_count || 0,
+                };
+              }
+
+              return {
+                ...list,
+                items: items || [],
+                item_count: list.item_count || 0,
+                purchased_count: list.purchased_count || 0,
+              };
+            } catch (error) {
+              console.warn(`Error loading items for list ${list.id}:`, error);
+              return {
+                ...list,
+                items: [],
+                item_count: list.item_count || 0,
+                purchased_count: list.purchased_count || 0,
+              };
+            }
+          })
+        );
         
-        dispatch({ type: 'SET_LISTS', payload: formattedLists });
-        await OfflineStorage.saveLists(formattedLists);
+        dispatch({ type: 'SET_LISTS', payload: listsWithItems });
+        await OfflineStorage.saveLists(listsWithItems);
       }
     } catch (error) {
       // Fallback to offline storage
@@ -362,27 +391,56 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
   const loadArchivedListsData = async () => {
     try {
       // Load archived lists for history view
+      // Remove nested items query to avoid RLS recursion
       const { data: archivedLists, error } = await supabase
         .from('shopping_lists')
-        .select(`
-          *,
-          items:list_items(*)
-        `)
+        .select('*')
         .eq('is_archived', true)
-        .eq('user_id', user!.id) // CRITICAL FIX: Filter by current user ID
+        .eq('user_id', user!.id)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
 
       if (archivedLists) {
-        const formattedLists = archivedLists.map(list => ({
-          ...list,
-          items: list.items || [],
-          item_count: list.item_count || 0,
-          purchased_count: list.purchased_count || 0,
-        }));
+        // Load items separately for each archived list to avoid RLS issues
+        const listsWithItems = await Promise.all(
+          archivedLists.map(async (list) => {
+            try {
+              const { data: items, error: itemsError } = await supabase
+                .from('list_items')
+                .select('*')
+                .eq('list_id', list.id)
+                .order('created_at', { ascending: false });
+
+              if (itemsError) {
+                console.warn(`Failed to load items for archived list ${list.id}:`, itemsError);
+                return {
+                  ...list,
+                  items: [],
+                  item_count: list.item_count || 0,
+                  purchased_count: list.purchased_count || 0,
+                };
+              }
+
+              return {
+                ...list,
+                items: items || [],
+                item_count: list.item_count || 0,
+                purchased_count: list.purchased_count || 0,
+              };
+            } catch (error) {
+              console.warn(`Error loading items for archived list ${list.id}:`, error);
+              return {
+                ...list,
+                items: [],
+                item_count: list.item_count || 0,
+                purchased_count: list.purchased_count || 0,
+              };
+            }
+          })
+        );
         
-        dispatch({ type: 'SET_ARCHIVED_LISTS', payload: formattedLists });
+        dispatch({ type: 'SET_ARCHIVED_LISTS', payload: listsWithItems });
       }
     } catch (error) {
       console.error('Failed to load archived lists:', error);

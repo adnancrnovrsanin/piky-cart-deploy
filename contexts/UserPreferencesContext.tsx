@@ -38,9 +38,9 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
         .from('user_profiles')
         .select('preferences')
         .eq('user_id', user!.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to handle no rows gracefully
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (error) {
         throw error;
       }
 
