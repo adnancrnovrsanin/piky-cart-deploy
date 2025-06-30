@@ -328,10 +328,10 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
     
     try {
       // Load only active lists (not archived) for the main lists view
-      // Remove nested items query to avoid RLS recursion
+      // Use explicit column selection to avoid RLS recursion
       const { data: lists, error } = await supabase
         .from('shopping_lists')
-        .select('*')
+        .select('id, user_id, name, description, is_archived, created_at, updated_at, item_count, purchased_count, is_collaborative, last_updated_by_collaborator_at')
         .eq('is_archived', false)
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
@@ -391,10 +391,10 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
   const loadArchivedListsData = async () => {
     try {
       // Load archived lists for history view
-      // Remove nested items query to avoid RLS recursion
+      // Use explicit column selection to avoid RLS recursion
       const { data: archivedLists, error } = await supabase
         .from('shopping_lists')
-        .select('*')
+        .select('id, user_id, name, description, is_archived, created_at, updated_at, item_count, purchased_count, is_collaborative, last_updated_by_collaborator_at')
         .eq('is_archived', true)
         .eq('user_id', user!.id)
         .order('updated_at', { ascending: false });
